@@ -31,7 +31,7 @@ class Role extends Model
      */
     public static function getPaginatedRoles(?string $search = null, int $perPage = 10)
     {
-        $query = static::select('roles.id', 'roles.name', 'roles.slug', 'roles.created_at')
+        $query = static::select('roles.id', 'roles.ulid', 'roles.name', 'roles.slug', 'roles.created_at')
             ->withCount('users');
 
         if (!empty($search)) {
@@ -51,7 +51,7 @@ class Role extends Model
      */
     public static function getAllOrdered()
     {
-        return static::select('id', 'name', 'slug')->orderBy('name')->get();
+        return static::select('id', 'ulid', 'name', 'slug')->orderBy('name')->get();
     }
 
     /**

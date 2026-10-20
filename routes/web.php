@@ -83,6 +83,7 @@ Route::middleware(['auth.custom', 'auto.logout'])->group(function () {
     Route::get('/subscription/checkout', [\App\Http\Controllers\Tenant\SubscriptionCheckoutController::class, 'index'])->name('tenant.subscription.checkout');
     Route::post('/subscription/checkout', [\App\Http\Controllers\Tenant\SubscriptionCheckoutController::class, 'store'])->name('tenant.subscription.checkout.store');
     Route::get('/subscription/pay/{invoice}', [\App\Http\Controllers\Tenant\SubscriptionCheckoutController::class, 'pay'])->name('tenant.subscription.pay');
+    Route::post('/subscription/pay/{invoice}/simulate', [\App\Http\Controllers\Tenant\SubscriptionCheckoutController::class, 'simulatePay'])->name('tenant.subscription.simulate-pay');
 
 // Keep-alive untuk reset session timeout
 Route::post('/keep-alive', function () {

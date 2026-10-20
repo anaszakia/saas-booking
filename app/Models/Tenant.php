@@ -46,6 +46,63 @@ class Tenant extends Model
     }
 
     /**
+     * Daftarkan tenant baru beserta akun pemilik (Owner) dan trial paket SaaS
+     */
+    public static function registerNewTenantWithOwner(array $tenantData, array $userData): array
+    {
+        return DB::transaction(function () use ($tenantData, $userData) {
+            $slug = \Illuminate\Support\Str::slug($tenantData['name']);
+            $baseSlug = $slug;
+            $counter = 1;
+            while (static::where('slug', $slug)->exists()) {
+                $slug = $baseSlug . '-' . $counter++;
+            }
+
+            $subdomain = str_replace('-', '', $slug);
+
+            $tenant = static::create([
+                'name'      => $tenantData['name'],
+                'slug'      => $slug,
+                'subdomain' => $subdomain,
+                'email'     => $userData['email'],
+                'phone'     => $userData['phone'] ?? null,
+                'address'   => $tenantData['address'] ?? null,
+                'status'    => 'active',
+            ]);
+
+            $ownerRole = Role::where('slug', 'owner')->first() ?? Role::where('slug', 'superadmin')->first();
+
+            $user = User::create([
+                'tenant_id' => $tenant->id,
+                'name'      => $userData['name'],
+                'email'     => $userData['email'],
+                'password'  => \Illuminate\Support\Facades\Hash::make($userData['password']),
+                'role_id'   => $ownerRole?->id,
+                'phone'     => $userData['phone'] ?? null,
+            ]);
+
+            if ($ownerRole) {
+                $user->roles()->syncWithoutDetaching([$ownerRole->id]);
+            }
+
+            // Berikan trial paket Starter selama 14 hari
+            $starterPlan = Plan::where('slug', 'starter')->first() ?? Plan::first();
+            if ($starterPlan) {
+                Subscription::create([
+                    'tenant_id'     => $tenant->id,
+                    'plan_id'       => $starterPlan->id,
+                    'status'        => 'trialing',
+                    'starts_at'     => now(),
+                    'ends_at'       => now()->addDays(14),
+                    'trial_ends_at' => now()->addDays(14),
+                ]);
+            }
+
+            return ['tenant' => $tenant, 'user' => $user];
+        });
+    }
+
+    /**
      * Cari tenant berdasarkan subdomain (ultra fast raw lookup)
      */
     public static function findBySubdomain(string $subdomain): ?self

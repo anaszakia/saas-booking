@@ -28,6 +28,18 @@ class XenditInvoiceAdapter implements PaymentGatewayInterface
             'invoice_duration' => 86400, // 24 jam
         ];
 
+        // Mode Mock / Simulasi Testing Lokal jika kredensial masih default dummy
+        if (str_contains($secretKey, 'demoKey') || empty($secretKey)) {
+            Log::info('Xendit: Using Simulation Invoice (Demo / Dummy Key detected)', ['order_id' => $params['order_id']]);
+            return [
+                'success'      => true,
+                'invoice_id'   => 'mock-xendit-' . md5($params['order_id'] . time()),
+                'redirect_url' => 'https://checkout-staging.xendit.co/web/' . md5($params['order_id']),
+                'is_mock'      => true,
+                'raw'          => ['status' => 'simulated'],
+            ];
+        }
+
         try {
             $response = Http::withBasicAuth($secretKey, '')
                 ->withHeaders([

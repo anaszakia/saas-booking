@@ -43,17 +43,29 @@
                         </div>
                         <a href="{{ route('dashboard') }}" class="btn btn-primary w-100">Kembali ke Dashboard</a>
                     @else
-                        @if($invoice->provider === 'midtrans' && $invoice->snap_token)
+                        @if($invoice->provider === 'midtrans' && $invoice->snap_token && !str_starts_with($invoice->snap_token, 'mock-snap-'))
                             <button id="pay-button" class="btn btn-success btn-lg w-100 py-3 shadow-sm">
                                 <i class="ti ti-qrcode me-2"></i> Bayar Sekarang via Midtrans (QRIS / VA)
                             </button>
-                        @elseif($invoice->checkout_url)
+                        @elseif($invoice->checkout_url && !str_contains($invoice->checkout_url, 'mock-token') && !str_contains($invoice->checkout_url, 'staging.xendit.co/web/'))
                             <a href="{{ $invoice->checkout_url }}" target="_blank" class="btn btn-primary btn-lg w-100 py-3 shadow-sm">
                                 <i class="ti ti-external-link me-2"></i> Buka Halaman Pembayaran Xendit
                             </a>
-                        @else
-                            <div class="alert alert-warning">
-                                Token transaksi belum siap. Silakan refresh halaman atau hubungi Super Admin.
+                        @endif
+
+                        @if(app()->environment('local') || str_starts_with($invoice->snap_token ?? '', 'mock-snap-') || str_contains($invoice->checkout_url ?? '', 'mock'))
+                            <div class="mt-3 p-3 bg-light-warning border border-warning rounded-3 text-start">
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-warning text-dark me-2">Testing / Sandbox Mode</span>
+                                    <small class="text-muted">Kredensial Server Key masih dummy/lokal.</small>
+                                </div>
+                                <p class="small text-muted mb-2">Untuk keperluan pengujian/demo tanpa gateway asli, Anda dapat menekan tombol simulasi di bawah untuk langsung menyelesaikan pembayaran:</p>
+                                <form action="{{ route('tenant.subscription.simulate-pay', $invoice->ulid) }}" method="POST">
+                                    @csrf
+                                    <button type="submit" class="btn btn-warning w-100 fw-bold">
+                                        <i class="ti ti-bolt me-1"></i> Simulasi Bayar Lunas (Instant Sandbox Success)
+                                    </button>
+                                </form>
                             </div>
                         @endif
                     @endif

@@ -108,7 +108,7 @@
         <li>
             <div class="text-center py-5 upgrade-ui">
                 <div>
-                    <img src="{{ $user->avatar ? app(\App\Services\MinioService::class)->url($user->avatar) : 'https://ui-avatars.com/api/?name=' . urlencode($user->name ?? 'Guest') . '&background=0d6efd&color=fff&size=128' }}"
+                    <img src="{{ minio_avatar($user?->avatar, $user?->name ?? 'Guest') }}"
                         alt="{{ $user->name ?? 'Guest' }}"
                         class="avatar avatar-md rounded-circle object-fit-cover"
                         onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($user->name ?? 'Guest') }}&background=0d6efd&color=fff&size=128'">

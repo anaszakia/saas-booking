@@ -118,20 +118,20 @@
                                 <td class="p-2 align-middle" style="height: 65px;">
                                     @if($matchedBooking)
                                         @if($matchedBooking->status === 'confirmed')
-                                            <a href="{{ route('bookings.show', $matchedBooking->ulid) }}"
+                                            <a href="{{ route('bookings.show', $matchedBooking->id) }}"
                                                class="d-block p-2 rounded text-decoration-none text-white bg-danger shadow-sm h-100 d-flex flex-column justify-content-center">
                                                 <div class="fw-bold small text-truncate">{{ $matchedBooking->customer_name }}</div>
                                                 <small class="opacity-75 font-monospace" style="font-size: 10px;">{{ $matchedBooking->booking_code }}</small>
                                             </a>
                                         @else
-                                            <a href="{{ route('bookings.show', $matchedBooking->ulid) }}"
+                                            <a href="{{ route('bookings.show', $matchedBooking->id) }}"
                                                class="d-block p-2 rounded text-decoration-none text-dark bg-warning shadow-sm h-100 d-flex flex-column justify-content-center">
                                                 <div class="fw-bold small text-truncate">Hold: {{ $matchedBooking->customer_name }}</div>
                                                 <small class="opacity-75 font-monospace" style="font-size: 10px;">Menunggu Bayar</small>
                                             </a>
                                         @endif
                                     @else
-                                        <a href="{{ route('bookings.create') }}?venue_id={{ $venueId }}&resource_id={{ $res->ulid }}&date={{ $date }}&time={{ $slotTime }}"
+                                        <a href="{{ route('bookings.create') }}?venue_id={{ $venueId }}&resource_id={{ $res->id }}&date={{ $date }}&time={{ $slotTime }}"
                                            class="d-block rounded p-2 text-decoration-none text-success bg-success-subtle h-100 d-flex align-items-center justify-content-center hover-slot"
                                            title="Klik untuk booking">
                                             <span class="small fw-semibold">+ Booking</span>

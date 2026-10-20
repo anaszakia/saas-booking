@@ -25,7 +25,13 @@
                             <form method="POST" action="{{ route('register') }}" class="needs-validation mb-6" novalidate>
                                 @csrf
                                 <div class="mb-3">
-                                    <label for="name" class="form-label">Nama Lengkap</label>
+                                    <label for="venue_name" class="form-label fw-bold">Nama Tempat / Venue Olahraga Anda <span class="badge bg-primary-subtle text-primary ms-1">Untuk Pemilik Venue</span></label>
+                                    <input type="text" class="form-control @error('venue_name') is-invalid @enderror"
+                                        id="venue_name" name="venue_name" value="{{ old('venue_name') }}" placeholder="Contoh: Smash Arena Badminton / Padel Club" />
+                                    <small class="text-muted" style="font-size: 11px;">Isi jika Anda mendaftar sebagai pengelola/pemilik tempat olahraga.</small>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">Nama Lengkap Penanggung Jawab <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control @error('name') is-invalid @enderror"
                                         id="name" name="name" value="{{ old('name') }}" required />
                                     @error('name')

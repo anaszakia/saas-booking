@@ -103,6 +103,21 @@
                             </div>
                         </div>
 
+                        @if($isSuperAdmin && $tenants->isNotEmpty())
+                            <div class="mb-4">
+                                <label class="form-label">Tetapkan ke Tempat / Venue (Tenant)</label>
+                                <select name="tenant_id" class="form-select">
+                                    <option value="">-- Khusus Platform Super Admin (Tanpa Tenant) --</option>
+                                    @foreach ($tenants as $t)
+                                        <option value="{{ $t->id }}" {{ old('tenant_id') == $t->id ? 'selected' : '' }}>
+                                            {{ $t->name }} ({{ $t->slug }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <small class="text-muted">Pilih jika akun ini ditujukan sebagai Pemilik (Owner) atau Kasir/Staf di tempat olahraga tertentu.</small>
+                            </div>
+                        @endif
+
                         <div class="mb-4">
                             <label class="form-label">Alamat</label>
                             <textarea name="address" rows="3"

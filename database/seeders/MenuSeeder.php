@@ -87,6 +87,13 @@ class MenuSeeder extends Seeder
                 'parent_id' => $facilityManagement->id,
                 'order'     => 3,
             ],
+            [
+                'name'      => 'Kelola Staf & Tim',
+                'url'       => '/users',
+                'icon'      => 'ti ti-users',
+                'parent_id' => $facilityManagement->id,
+                'order'     => 4,
+            ],
         ];
 
         // Group Operasional Booking
@@ -187,22 +194,49 @@ class MenuSeeder extends Seeder
 
         $allMenuIds = $menus->pluck('id')->all();
 
+        // 1. SuperAdmin: Mendapatkan seluruh akses menu
         if ($admin) {
-            $admin->menus()->syncWithoutDetaching($allMenuIds);
+            $admin->menus()->sync($allMenuIds);
         }
 
+        // 2. Tenant Owner: Hanya akses Dashboard, Tempat & Fasilitas, serta Operasional Booking (termasuk Kelola Staf, Payment Gateway & Perpanjang Langganan)
         $owner = Role::where('slug', 'owner')->first();
         if ($owner) {
-            $owner->menus()->syncWithoutDetaching($allMenuIds);
+            $ownerMenuIds = $menus->filter(function ($m) {
+                return in_array($m->name, ['Dashboard', 'Tempat & Fasilitas', 'Operasional Booking'])
+                    || in_array($m->url, [
+                        '/dashboard',
+                        '/venues',
+                        '/resources',
+                        '/pricing-rules',
+                        '/users',
+                        '/bookings/calendar',
+                        '/bookings/create',
+                        '/bookings',
+                        '/payment-settings',
+                        '/subscription/checkout',
+                    ]);
+            })->pluck('id')->all();
+
+            $owner->menus()->sync($ownerMenuIds);
         }
 
+        // 3. Tenant Staff: Hanya operasional harian (Dashboard, Kalender, Buat Booking, Riwayat Booking, Data Venue, Lapangan)
         $staff = Role::where('slug', 'staff')->first();
         if ($staff) {
             $staffMenuIds = $menus->filter(function ($m) {
-                return in_array($m->url, ['/dashboard', '/bookings/calendar', '/bookings/create', '/bookings', '/venues', '/resources'])
-                    || in_array($m->name, ['Operasional Booking', 'Tempat & Fasilitas']);
+                return in_array($m->name, ['Dashboard', 'Tempat & Fasilitas', 'Operasional Booking'])
+                    || in_array($m->url, [
+                        '/dashboard',
+                        '/bookings/calendar',
+                        '/bookings/create',
+                        '/bookings',
+                        '/venues',
+                        '/resources',
+                    ]);
             })->pluck('id')->all();
-            $staff->menus()->syncWithoutDetaching($staffMenuIds);
+
+            $staff->menus()->sync($staffMenuIds);
         }
     }
 

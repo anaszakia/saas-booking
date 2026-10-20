@@ -99,4 +99,18 @@ class SubscriptionCheckoutController extends Controller
 
         return view('tenants.subscription.pay', compact('invoice', 'platformCreds'));
     }
+
+    /**
+     * Simulasi pelunasan langsung untuk keperluan sandbox/testing lokal
+     */
+    public function simulatePay(SubscriptionInvoice $invoice)
+    {
+        SubscriptionInvoice::settleInvoice($invoice->invoice_number, [
+            'simulated' => true,
+            'channel'   => 'sandbox_manual_test',
+        ]);
+
+        return redirect()->route('tenant.subscription.pay', $invoice->ulid)
+            ->with('success', 'Simulasi pembayaran sukses! Langganan venue Anda telah aktif dan diperpanjang.');
+    }
 }

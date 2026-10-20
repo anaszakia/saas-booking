@@ -40,6 +40,18 @@ class MidtransSnapAdapter implements PaymentGatewayInterface
             ],
         ];
 
+        // Mode Mock / Simulasi Testing Lokal jika kredensial masih default dummy
+        if (str_contains($serverKey, 'demoKey') || empty($serverKey)) {
+            Log::info('Midtrans: Using Sandbox Simulation Token (Demo / Dummy Key detected)', ['order_id' => $params['order_id']]);
+            return [
+                'success'      => true,
+                'snap_token'   => 'mock-snap-' . md5($params['order_id'] . time()),
+                'redirect_url' => 'https://app.sandbox.midtrans.com/snap/v2/vtweb/mock-token',
+                'is_mock'      => true,
+                'raw'          => ['token' => 'mock-token', 'status' => 'simulated'],
+            ];
+        }
+
         try {
             $response = Http::withBasicAuth($serverKey, '')
                 ->withHeaders([
@@ -59,9 +71,18 @@ class MidtransSnapAdapter implements PaymentGatewayInterface
             }
 
             Log::error('Midtrans Snap Error', ['status' => $response->status(), 'body' => $response->body()]);
+            
+            $errorMessage = $response->json('error_messages')[0] 
+                ?? $response->json('error') 
+                ?? ('Midtrans API Error (' . $response->status() . ')');
+
+            if ($response->status() === 401) {
+                $errorMessage = 'Server Key Midtrans tidak valid atau belum diotorisasi. Silakan periksa kredensial di Pengaturan Gateway Super Admin.';
+            }
+
             return [
                 'success' => false,
-                'error'   => $response->json('error_messages')[0] ?? 'Gagal membuat transaksi Midtrans.',
+                'error'   => $errorMessage,
             ];
         } catch (\Throwable $e) {
             Log::error('Midtrans Exception', ['msg' => $e->getMessage()]);

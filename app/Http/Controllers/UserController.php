@@ -17,21 +17,38 @@ class UserController extends Controller implements HasMiddleware
 
     public function index(Request $request)
     {
-        $users = User::getPaginatedUsers($request->query('search'), 10);
+        $isSuperAdmin = auth()->user()?->roles()->where('slug', 'superadmin')->exists();
+        $tenantId = $isSuperAdmin ? null : current_tenant_id();
+
+        $users = User::getPaginatedUsers($request->query('search'), 10, $tenantId);
 
         return view('admin.users.index', compact('users'));
     }
 
     public function create()
     {
-        $roles = Role::getAllOrdered();
+        $isSuperAdmin = auth()->user()?->roles()->where('slug', 'superadmin')->exists();
+        
+        // Tenant Owner hanya boleh membuat akun Tenant Staff (atau role staff/kasir)
+        $roles = $isSuperAdmin 
+            ? Role::getAllOrdered() 
+            : Role::whereIn('slug', ['staff'])->get();
 
-        return view('admin.users.create', compact('roles'));
+        $tenants = $isSuperAdmin ? \App\Models\Tenant::all() : collect();
+
+        return view('admin.users.create', compact('roles', 'tenants', 'isSuperAdmin'));
     }
 
     public function store(Request $request)
     {
+        $tenantId = current_tenant_id();
+
+        if (!$tenantId && $request->filled('tenant_id')) {
+            $tenantId = (int) $request->input('tenant_id');
+        }
+
         $request->validate([
+            'tenant_id' => 'nullable|exists:tenants,id',
             'name'      => 'required|string|max:100',
             'email'     => 'required|email|unique:users,email',
             'password'  => 'required|min:8|confirmed',
@@ -47,13 +64,14 @@ class UserController extends Controller implements HasMiddleware
         }
 
         $createdUser = User::create([
-            'name'     => $request->name,
-            'email'    => $request->email,
-            'password' => Hash::make($request->password),
-            'role_id'  => $request->role_id,
-            'phone'    => $request->phone,
-            'address'  => $request->address,
-            'avatar'   => $avatarPath,
+            'tenant_id' => $tenantId,
+            'name'      => $request->name,
+            'email'     => $request->email,
+            'password'  => Hash::make($request->password),
+            'role_id'   => $request->role_id,
+            'phone'     => $request->phone,
+            'address'   => $request->address,
+            'avatar'    => $avatarPath,
         ]);
 
         // Sync role pivot table
@@ -74,7 +92,13 @@ class UserController extends Controller implements HasMiddleware
 
     public function edit(User $user)
     {
-        $roles = Role::getAllOrdered();
+        $isSuperAdmin = auth()->user()?->roles()->where('slug', 'superadmin')->exists();
+
+        // Tenant Owner hanya boleh melihat dan mengedit role Staff
+        $roles = $isSuperAdmin 
+            ? Role::getAllOrdered() 
+            : Role::whereIn('slug', ['staff'])->get();
+
         $user->load('role', 'roles');
 
         return view('admin.users.edit', compact('user', 'roles'));

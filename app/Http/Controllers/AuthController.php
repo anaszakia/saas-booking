@@ -29,9 +29,11 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $request->validate([
-            'name'     => 'required|string|max:100',
-            'email'    => 'required|email|max:150|unique:users,email',
-            'password' => [
+            'venue_name' => 'nullable|string|max:150',
+            'phone'      => 'nullable|string|max:20',
+            'name'       => 'required|string|max:100',
+            'email'      => 'required|email|max:150|unique:users,email',
+            'password'   => [
                 'required',
                 'string',
                 'confirmed',
@@ -71,16 +73,34 @@ class AuthController extends Controller
             'password.confirmed' => 'Konfirmasi password tidak cocok.',
         ]);
 
-        $defaultRole = Role::getDefaultUserRole();
+        if ($request->filled('venue_name')) {
+            // Registrasi Pemilik Venue (Tenant Onboarding)
+            $result = \App\Models\Tenant::registerNewTenantWithOwner(
+                ['name' => $request->venue_name],
+                [
+                    'name'     => $request->name,
+                    'email'    => $request->email,
+                    'password' => $request->password,
+                    'phone'    => $request->phone,
+                ]
+            );
 
-        $user = User::create([
-            'name'     => $request->name,
-            'email'    => $request->email,
-            'password' => Hash::make($request->password),
-            'role_id'  => $defaultRole->id,
-        ]);
+            $user = $result['user'];
+            $tenant = $result['tenant'];
+            session(['tenant_id' => $tenant->id]);
+        } else {
+            // Registrasi User Biasa
+            $defaultRole = Role::getDefaultUserRole();
 
-        $user->roles()->syncWithoutDetaching([$defaultRole->id]);
+            $user = User::create([
+                'name'     => $request->name,
+                'email'    => $request->email,
+                'password' => Hash::make($request->password),
+                'role_id'  => $defaultRole->id,
+            ]);
+
+            $user->roles()->syncWithoutDetaching([$defaultRole->id]);
+        }
 
         Auth::login($user);
         $request->session()->regenerate();
@@ -92,7 +112,7 @@ class AuthController extends Controller
             'last_activity' => now()->timestamp,
         ]);
 
-        return redirect()->route('dashboard')->with('success', 'Pendaftaran berhasil! Selamat datang di Dasher.');
+        return redirect()->route('dashboard')->with('success', 'Pendaftaran berhasil! Selamat datang di sistem SaaS booking.');
     }
 
     public function login(Request $request)

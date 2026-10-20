@@ -102,10 +102,14 @@ class User extends Authenticatable implements PasskeyUser
     /**
      * Get paginated users with indexed search & lean relation loading
      */
-    public static function getPaginatedUsers(?string $search = null, int $perPage = 10)
+    public static function getPaginatedUsers(?string $search = null, int $perPage = 10, ?int $tenantId = null)
     {
-        $query = static::select('users.id', 'users.ulid', 'users.name', 'users.email', 'users.phone', 'users.avatar', 'users.role_id', 'users.created_at')
+        $query = static::select('users.id', 'users.ulid', 'users.name', 'users.email', 'users.phone', 'users.avatar', 'users.role_id', 'users.tenant_id', 'users.created_at')
             ->with(['role:id,name,slug', 'roles:id,name,slug']);
+
+        if ($tenantId) {
+            $query->where('users.tenant_id', $tenantId);
+        }
 
         if (!empty($search)) {
             $query->where(function ($sub) use ($search) {
