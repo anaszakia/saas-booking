@@ -44,7 +44,14 @@ class PublicBookingController extends Controller
 
         $matrix = $venueId ? Booking::getCalendarMatrix($tenant->id, $venueId, $date) : ['bookings' => collect()];
 
-        return view('public.booking', compact('tenant', 'venues', 'venueId', 'date', 'resources', 'addons', 'timeSlots', 'matrix'));
+        // Perkirakan harga dasar untuk setiap resource
+        $sampleTime = $date . ' 09:00:00';
+        $resourcePrices = [];
+        foreach ($resources as $res) {
+            $resourcePrices[$res->id] = PricingRule::calculatePrice($tenant->id, $res->id, $sampleTime);
+        }
+
+        return view('public.booking', compact('tenant', 'venues', 'venueId', 'date', 'resources', 'addons', 'timeSlots', 'matrix', 'resourcePrices'));
     }
 
     /**
@@ -158,7 +165,58 @@ class PublicBookingController extends Controller
         $payment = $booking->payments->first();
         $tenantCredentials = \App\Services\Payment\PaymentGatewayManager::getTenantCredentials($booking->tenant_id);
 
+        // Jika status booking masih pending dan menggunakan Midtrans, coba auto-check status real-time ke API Midtrans
+        if ($booking->status === 'pending' && $payment && !empty($tenantCredentials['server_key'])) {
+            try {
+                $isSandbox = $tenantCredentials['is_sandbox'] ?? true;
+                $apiUrl = $isSandbox 
+                    ? "https://api.sandbox.midtrans.com/v2/{$payment->payment_number}/status"
+                    : "https://api.midtrans.com/v2/{$payment->payment_number}/status";
+
+                $res = \Illuminate\Support\Facades\Http::withBasicAuth($tenantCredentials['server_key'], '')
+                    ->timeout(3)
+                    ->get($apiUrl);
+
+                if ($res->successful()) {
+                    $json = $res->json();
+                    $adapter = \App\Services\Payment\PaymentGatewayManager::getAdapter('midtrans');
+                    $parsedStatus = $adapter->parseWebhookStatus($json);
+
+                    if ($parsedStatus === 'success') {
+                        Payment::processWebhookNotification($payment->payment_number, 'success', $json);
+                        // Reload data booking & payment yang sudah terupdate
+                        $booking = Booking::findByBookingCode($bookingCode);
+                        $payment = $booking->payments->first();
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Abaikan error koneksi agar halaman tetap bisa dibuka
+            }
+        }
+
         return view('public.invoice', compact('booking', 'payment', 'tenantCredentials'));
+    }
+
+    /**
+     * Download Invoice PDF Resmi
+     */
+    public function downloadPdf(string $bookingCode)
+    {
+        $booking = Booking::findByBookingCode($bookingCode);
+        if (!$booking) {
+            abort(404, 'Booking tidak ditemukan');
+        }
+
+        $payment = $booking->payments->first();
+        $tenant  = $booking->tenant;
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('public.invoice-pdf', compact('booking', 'payment', 'tenant'))
+            ->setPaper('a4', 'portrait')
+            ->setOption(['isHtml5ParserEnabled' => true, 'isRemoteEnabled' => true]);
+
+        $fileName = 'Invoice-' . $booking->booking_code . '.pdf';
+
+        return $pdf->download($fileName);
     }
 
     /**
@@ -176,6 +234,31 @@ class PublicBookingController extends Controller
             return response()->json(['success' => false, 'error' => 'Data payment tidak ditemukan'], 404);
         }
 
+        $paymentPayload = is_array($payment->payload) ? $payment->payload : [];
+
+        // 1. Jika token snap yang valid sudah tersimpan sebelumnya dan belum lunas, gunakan kembali
+        if (!empty($paymentPayload['snap_token']) && !empty($paymentPayload['snap_token_created_at'])) {
+            $tokenAgeMinutes = \Carbon\Carbon::parse($paymentPayload['snap_token_created_at'])->diffInMinutes(now());
+            // Midtrans Snap Token aktif selama minimal 15-60 menit
+            if ($tokenAgeMinutes < 14) {
+                return response()->json([
+                    'success'      => true,
+                    'snap_token'   => $paymentPayload['snap_token'],
+                    'redirect_url' => $paymentPayload['redirect_url'] ?? null,
+                ]);
+            }
+        }
+
+        // 2. Jika token baru atau order_id sebelumnya sudah pernah dikirim ke Midtrans, buat order_id unik baru
+        $paymentNumber = $payment->payment_number;
+        if (!empty($paymentPayload['order_id_sent'])) {
+            // Berikan postfix acak agar tidak bentrok 'order_id sudah digunakan' di Midtrans
+            $paymentNumber = 'PAY-' . date('Ymd') . '-' . strtoupper(\Illuminate\Support\Str::random(6));
+            $payment->update([
+                'payment_number' => $paymentNumber,
+            ]);
+        }
+
         $credentials = \App\Services\Payment\PaymentGatewayManager::getTenantCredentials($booking->tenant_id);
         if (!$credentials) {
             return response()->json(['success' => false, 'error' => 'Gateway pembayaran online belum diaktifkan oleh pengelola venue.'], 400);
@@ -183,7 +266,7 @@ class PublicBookingController extends Controller
 
         $adapter = \App\Services\Payment\PaymentGatewayManager::getAdapter($credentials['provider']);
         $res = $adapter->createTransaction([
-            'order_id'       => $payment->payment_number,
+            'order_id'       => $paymentNumber,
             'amount'         => (float) $payment->amount,
             'item_id'        => $booking->booking_code,
             'item_name'      => 'Booking Lapangan ' . ($booking->resource->name ?? 'Venue'),
@@ -193,8 +276,38 @@ class PublicBookingController extends Controller
         ], $credentials);
 
         if (!$res['success']) {
-            return response()->json(['success' => false, 'error' => $res['error'] ?? 'Gagal membuat tagihan.'], 400);
+            // Jika tetap gagal karena order_id bentrok di sandbox, fallback auto-regenerate sekali lagi
+            if (str_contains(strtolower($res['error'] ?? ''), 'order_id')) {
+                $retryNumber = 'PAY-' . date('Ymd') . '-' . strtoupper(\Illuminate\Support\Str::random(7));
+                $payment->update(['payment_number' => $retryNumber]);
+                $res = $adapter->createTransaction([
+                    'order_id'       => $retryNumber,
+                    'amount'         => (float) $payment->amount,
+                    'item_id'        => $booking->booking_code,
+                    'item_name'      => 'Booking Lapangan ' . ($booking->resource->name ?? 'Venue'),
+                    'customer_name'  => $booking->customer->name ?? 'Pelanggan',
+                    'customer_email' => $booking->customer->email ?? 'customer@example.com',
+                    'customer_phone' => $booking->customer->phone ?? '081234567890',
+                ], $credentials);
+                $paymentNumber = $retryNumber;
+            }
+
+            if (!$res['success']) {
+                return response()->json(['success' => false, 'error' => $res['error'] ?? 'Gagal membuat tagihan.'], 400);
+            }
         }
+
+        // Simpan token snap dan penanda order_id agar tidak perlu hit ulang jika direfresh
+        $paymentPayload['snap_token'] = $res['snap_token'] ?? null;
+        $paymentPayload['redirect_url'] = $res['redirect_url'] ?? null;
+        $paymentPayload['snap_token_created_at'] = now()->toDateTimeString();
+        $paymentPayload['order_id_sent'] = $paymentNumber;
+
+        $payment->update([
+            'payload'        => $paymentPayload,
+            'payment_method' => 'midtrans',
+            'external_id'    => $paymentNumber,
+        ]);
 
         return response()->json([
             'success'      => true,

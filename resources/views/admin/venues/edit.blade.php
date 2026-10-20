@@ -70,7 +70,7 @@
                             <div class="col-md-6 mb-3">
                                 <label class="form-label" for="latitude">Latitude</label>
                                 <input type="text" class="form-control @error('latitude') is-invalid @enderror"
-                                    id="latitude" name="latitude" value="{{ old('latitude', $venue->latitude) }}">
+                                    id="latitude" name="latitude" value="{{ old('latitude', $venue->latitude) }}" readonly>
                                 @error('latitude')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -79,11 +79,27 @@
                             <div class="col-md-6 mb-3">
                                 <label class="form-label" for="longitude">Longitude</label>
                                 <input type="text" class="form-control @error('longitude') is-invalid @enderror"
-                                    id="longitude" name="longitude" value="{{ old('longitude', $venue->longitude) }}">
+                                    id="longitude" name="longitude" value="{{ old('longitude', $venue->longitude) }}" readonly>
                                 @error('longitude')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
+                        </div>
+
+                        {{-- Leaflet Map Picker --}}
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label mb-0 fw-semibold">
+                                    <i class="ti ti-map-pin me-1 text-danger"></i>Pilih Titik Lokasi Venue di Peta
+                                </label>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="btn-current-location">
+                                    <i class="ti ti-current-location me-1"></i> Gunakan Lokasi Saat Ini
+                                </button>
+                            </div>
+                            <div id="venueMap" style="height: 350px; border-radius: 8px; border: 1px solid #dee2e6; z-index: 1;"></div>
+                            <small class="text-muted d-block mt-1">
+                                <i class="ti ti-info-circle me-1"></i>Klik pada peta atau geser (drag) pin merah untuk memperbarui posisi venue.
+                            </small>
                         </div>
 
                         @if($venue->image)
@@ -130,3 +146,108 @@
     </div>
 
 @endsection
+
+@push('styles')
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <style>
+        .leaflet-container {
+            font-family: inherit;
+        }
+    </style>
+@endpush
+
+@push('scripts')
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const latInput = document.getElementById('latitude');
+            const lngInput = document.getElementById('longitude');
+            const btnCurrentLoc = document.getElementById('btn-current-location');
+
+            let currentLat = parseFloat(latInput.value) || -6.2088;
+            let currentLng = parseFloat(lngInput.value) || 106.8456;
+
+            const map = L.map('venueMap').setView([currentLat, currentLng], 15);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            }).addTo(map);
+
+            const marker = L.marker([currentLat, currentLng], {
+                draggable: true
+            }).addTo(map);
+
+            marker.bindPopup('<b>{{ $venue->name }}</b><br>Geser pin untuk memindahkan posisi.').openPopup();
+
+            function updateInputs(lat, lng) {
+                latInput.value = lat.toFixed(6);
+                lngInput.value = lng.toFixed(6);
+            }
+
+            marker.on('dragend', function (e) {
+                const position = marker.getLatLng();
+                updateInputs(position.lat, position.lng);
+            });
+
+            map.on('click', function (e) {
+                marker.setLatLng(e.latlng);
+                updateInputs(e.latlng.lat, e.latlng.lng);
+            });
+
+            btnCurrentLoc.addEventListener('click', function (e) {
+                e.preventDefault();
+                btnCurrentLoc.disabled = true;
+                btnCurrentLoc.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Mencari lokasi...';
+
+                function fallbackIpLocation(reason) {
+                    fetch('https://ipapi.co/json/')
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.latitude && data.longitude) {
+                                const lat = parseFloat(data.latitude);
+                                const lng = parseFloat(data.longitude);
+                                map.setView([lat, lng], 15);
+                                marker.setLatLng([lat, lng]);
+                                updateInputs(lat, lng);
+                            }
+                        })
+                        .catch(() => {
+                            if (reason) alert(reason);
+                        })
+                        .finally(() => {
+                            btnCurrentLoc.disabled = false;
+                            btnCurrentLoc.innerHTML = '<i class="ti ti-current-location me-1"></i> Gunakan Lokasi Saat Ini';
+                        });
+                }
+
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        function (position) {
+                            const lat = position.coords.latitude;
+                            const lng = position.coords.longitude;
+
+                            map.setView([lat, lng], 16);
+                            marker.setLatLng([lat, lng]);
+                            updateInputs(lat, lng);
+
+                            btnCurrentLoc.disabled = false;
+                            btnCurrentLoc.innerHTML = '<i class="ti ti-current-location me-1"></i> Gunakan Lokasi Saat Ini';
+                        },
+                        function (error) {
+                            console.warn('Browser GPS error:', error.message);
+                            fallbackIpLocation();
+                        },
+                        { enableHighAccuracy: false, timeout: 6000, maximumAge: 60000 }
+                    );
+                } else {
+                    fallbackIpLocation('Browser tidak mendukung Geolocation.');
+                }
+            });
+
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 300);
+        });
+    </script>
+@endpush

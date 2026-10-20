@@ -101,61 +101,54 @@
                     </table>
                 </div>
 
-                {{-- Opsi Pembayaran Online Otomatis & Manual Transfer --}}
-                @if($booking->status === 'pending')
-                    @if(!empty($tenantCredentials) && !empty($tenantCredentials['provider']))
-                        <div class="p-4 bg-primary-subtle rounded-3 border border-primary mb-4 text-center">
-                            <h6 class="fw-bold mb-1 text-primary">
-                                <i class="ti ti-bolt text-warning fs-4"></i> Pembayaran Online Instan (QRIS & Virtual Account)
-                            </h6>
-                            <p class="small text-muted mb-3">Slot booking otomatis terkonfirmasi detik itu juga setelah pembayaran berhasil.</p>
-                            
-                            <button id="btn-pay-online" class="btn btn-primary btn-lg w-100 py-3 shadow-sm fw-bold">
-                                <i class="ti ti-credit-card me-2"></i> Bayar Sekarang via {{ strtoupper($tenantCredentials['provider']) }}
-                            </button>
+                {{-- Tampilan Sukses Pembayaran --}}
+                @if($booking->status === 'confirmed')
+                    <div class="p-4 bg-success-subtle rounded-3 border border-success mb-4 text-center">
+                        <div class="d-inline-flex align-items-center justify-content-center p-3 bg-white text-success rounded-circle shadow-sm mb-3">
+                            <i class="ti ti-circle-check fs-1"></i>
                         </div>
-                    @endif
-
-                    <div class="p-4 bg-light rounded-3 border mb-4">
-                        <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
-                            <i class="ti ti-building-bank text-primary fs-4"></i> Transfer Manual Bank
-                        </h6>
-                        <div class="p-3 bg-white rounded-3 border mb-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <div class="text-muted small">Rekening Bank Venue:</div>
-                                    <div class="fw-bold fs-5 font-monospace">8820-1928-3920 (BCA)</div>
-                                    <div class="small text-muted">a.n. {{ $booking->tenant?->name }}</div>
-                                </div>
-                                <button class="btn btn-outline-primary btn-sm" onclick="navigator.clipboard.writeText('882019283920'); alert('Nomor rekening disalin!')">
-                                    <i class="ti ti-copy me-1"></i> Salin
-                                </button>
-                            </div>
+                        <h4 class="fw-bold text-success mb-1">Pembayaran Berhasil!</h4>
+                        <p class="text-muted small mb-3">
+                            Reservasi jadwal sewa lapangan Anda telah aktif dan terkonfirmasi otomatis. Terima kasih!
+                        </p>
+                        
+                        <div class="d-flex flex-wrap justify-content-center gap-2">
+                            <a href="{{ route('public.invoice.download-pdf', $booking->booking_code) }}" class="btn btn-success px-4 py-2 fw-semibold shadow-xs">
+                                <i class="ti ti-download me-2"></i> Download File PDF Invoice
+                            </a>
+                            <a href="{{ route('public.booking', $booking->tenant?->slug ?? 'venue') }}" class="btn btn-outline-primary px-4 py-2 fw-semibold">
+                                <i class="ti ti-plus me-2"></i> Buat Booking Baru
+                            </a>
                         </div>
-
-                        {{-- Form Upload Bukti --}}
-                        <form action="{{ route('public.upload-proof', $booking->booking_code) }}" method="POST" enctype="multipart/form-data">
-                            @csrf
-                            <label class="form-label fw-bold small">Unggah Bukti Struk Transfer (Jika Transfer Manual):</label>
-                            <div class="input-group mb-2">
-                                <input type="file" name="payment_proof" class="form-control" accept="image/*" required>
-                                <button type="submit" class="btn btn-outline-primary px-4 fw-semibold">
-                                    <i class="ti ti-upload me-1"></i> Kirim Bukti
-                                </button>
-                            </div>
-                            <small class="text-muted d-block" style="font-size: 11px;">
-                                Format JPG, PNG, WEBP maks 3MB.
-                            </small>
-                        </form>
                     </div>
                 @endif
 
-                {{-- WhatsApp Support --}}
-                <div class="text-center pt-3">
-                    <p class="text-muted small mb-2">Ada kendala atau ingin konfirmasi cepat?</p>
-                    <a href="https://wa.me/{{ preg_replace('/^0/', '62', preg_replace('/[^\d]/', '', $booking->tenant?->phone ?? '081234567890')) }}?text=Halo%20saya%20sudah%20transfer%20untuk%20booking%20{{ $booking->booking_code }}"
-                       target="_blank" class="btn btn-outline-success rounded-pill px-4">
-                        <i class="ti ti-brand-whatsapp me-1"></i> Konfirmasi ke WhatsApp Pengelola
+                {{-- Opsi Pembayaran Midtrans Otomatis (Hanya muncul jika status pending) --}}
+                @if($booking->status === 'pending')
+                    <div class="p-4 bg-primary-subtle rounded-3 border border-primary mb-4 text-center">
+                        <div class="d-inline-flex align-items-center justify-content-center p-3 bg-white rounded-circle shadow-sm mb-3 text-primary">
+                            <i class="ti ti-qrcode fs-1"></i>
+                        </div>
+                        <h5 class="fw-bold mb-1 text-primary">
+                            Pembayaran Otomatis Midtrans
+                        </h5>
+                        <p class="small text-muted mb-3">
+                            Tersedia QRIS (GoPay, OVO, ShopeePay, Dana, BCA Mobile) dan Virtual Account semua Bank.<br>
+                            Status reservasi otomatis terkonfirmasi instan setelah pembayaran selesai.
+                        </p>
+                        
+                        <button id="btn-pay-online" class="btn btn-primary btn-lg w-100 py-3 shadow-sm fw-bold fs-5">
+                            <i class="ti ti-wallet me-2"></i> Bayar Sekarang via Midtrans
+                        </button>
+                    </div>
+                @endif
+
+                {{-- WhatsApp Support & Contact --}}
+                <div class="text-center pt-3 border-top">
+                    <p class="text-muted small mb-2">Butuh bantuan pengelola venue?</p>
+                    <a href="https://wa.me/{{ preg_replace('/^0/', '62', preg_replace('/[^\d]/', '', $booking->tenant?->phone ?? '081234567890')) }}?text=Halo%20saya%20sudah%20melakukan%20pembayaran%20untuk%20booking%20{{ $booking->booking_code }}"
+                       target="_blank" class="btn btn-sm btn-outline-success rounded-pill px-4">
+                        <i class="ti ti-brand-whatsapp me-1"></i> Hubungi WhatsApp Pengelola
                     </a>
                 </div>
             </div>
@@ -202,20 +195,45 @@
                             window.location.reload();
                         },
                         onError: function (result) {
-                            alert('Pembayaran gagal atau dibatalkan.');
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Pembayaran Gagal',
+                                text: 'Pembayaran tidak berhasil atau telah dibatalkan.',
+                                confirmButtonColor: '#0284c7'
+                            });
                         }
                     });
                 } else if (data.redirect_url) {
                     window.location.href = data.redirect_url;
                 } else {
-                    alert(data.error || 'Terjadi kesalahan saat memproses pembayaran online.');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Kendala Gateway Pembayaran',
+                        text: data.error || 'Terjadi kesalahan saat memproses pembayaran online.',
+                        confirmButtonColor: '#0284c7'
+                    });
                 }
             })
             .catch(err => {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="ti ti-credit-card me-2"></i> Bayar Sekarang via MIDTRANS';
-                alert('Gagal menghubungi server.');
+                btn.innerHTML = '<i class="ti ti-wallet me-2"></i> Bayar Sekarang via Midtrans';
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Gagal Menghubungi Server',
+                    text: 'Tidak dapat memproses transaksi ke server gateway saat ini.',
+                    confirmButtonColor: '#0284c7'
+                });
             });
+        });
+
+        // Buka popup pembayaran otomatis saat halaman invoice selesai dimuat
+        document.addEventListener('DOMContentLoaded', function () {
+            setTimeout(function() {
+                const payBtn = document.getElementById('btn-pay-online');
+                if (payBtn) {
+                    payBtn.click();
+                }
+            }, 500);
         });
     </script>
 @elseif(!empty($tenantCredentials) && $tenantCredentials['provider'] === 'xendit')
@@ -240,13 +258,23 @@
                 } else {
                     btn.disabled = false;
                     btn.innerHTML = '<i class="ti ti-credit-card me-2"></i> Bayar Sekarang via XENDIT';
-                    alert(data.error || 'Terjadi kesalahan.');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Kendala Gateway Pembayaran',
+                        text: data.error || 'Terjadi kesalahan saat memproses pembayaran online.',
+                        confirmButtonColor: '#0284c7'
+                    });
                 }
             })
             .catch(err => {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="ti ti-credit-card me-2"></i> Bayar Sekarang via XENDIT';
-                alert('Gagal menghubungi server.');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Gagal Menghubungi Server',
+                    text: 'Tidak dapat memproses transaksi ke server gateway saat ini.',
+                    confirmButtonColor: '#0284c7'
+                });
             });
         });
     </script>

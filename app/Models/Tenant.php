@@ -85,16 +85,35 @@ class Tenant extends Model
                 $user->roles()->syncWithoutDetaching([$ownerRole->id]);
             }
 
-            // Berikan trial paket Starter selama 14 hari
-            $starterPlan = Plan::where('slug', 'starter')->first() ?? Plan::first();
-            if ($starterPlan) {
+            // Berikan paket langganan (default trial starter 14 hari, atau paket pilihan Super Admin)
+            $planId = $tenantData['plan_id'] ?? null;
+            $durationMonths = (int) ($tenantData['duration_months'] ?? 0);
+
+            if ($planId) {
+                $chosenPlan = Plan::where('id', $planId)->first();
+            } else {
+                $chosenPlan = Plan::where('slug', 'starter')->first() ?? Plan::first();
+            }
+
+            if ($chosenPlan) {
+                $startsAt = now();
+                if ($durationMonths > 0) {
+                    $endsAt = now()->addMonths($durationMonths);
+                    $status = 'active';
+                    $trialEndsAt = null;
+                } else {
+                    $endsAt = now()->addDays(14);
+                    $status = 'trialing';
+                    $trialEndsAt = now()->addDays(14);
+                }
+
                 Subscription::create([
                     'tenant_id'     => $tenant->id,
-                    'plan_id'       => $starterPlan->id,
-                    'status'        => 'trialing',
-                    'starts_at'     => now(),
-                    'ends_at'       => now()->addDays(14),
-                    'trial_ends_at' => now()->addDays(14),
+                    'plan_id'       => $chosenPlan->id,
+                    'status'        => $status,
+                    'starts_at'     => $startsAt,
+                    'ends_at'       => $endsAt,
+                    'trial_ends_at' => $trialEndsAt,
                 ]);
             }
 

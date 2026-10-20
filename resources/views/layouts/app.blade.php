@@ -62,33 +62,39 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
 
     <script>
-        // Handle semua form delete dengan SweetAlert
-        document.addEventListener('DOMContentLoaded', function () {
+        // Handle semua tombol konfirmasi (delete, toggle status, dll) dengan SweetAlert2
+        document.addEventListener('click', function (e) {
+            const btn = e.target.closest('[data-confirm]');
+            if (!btn) return;
 
-            document.querySelectorAll('[data-confirm]').forEach(function (el) {
-                el.addEventListener('click', function (e) {
-                    e.preventDefault();
+            e.preventDefault();
 
-                    const message = el.getAttribute('data-confirm') || 'Yakin ingin melanjutkan?';
-                    const form    = el.closest('form');
+            const message     = btn.getAttribute('data-confirm') || 'Yakin ingin melanjutkan?';
+            const title       = btn.getAttribute('data-confirm-title') || 'Konfirmasi Tindakan';
+            const confirmText = btn.getAttribute('data-confirm-btn') || 'Ya, Lanjutkan';
+            const btnColor    = btn.getAttribute('data-confirm-color') || '#dc3545';
+            const iconType    = btn.getAttribute('data-confirm-icon') || 'warning';
+            const form        = btn.closest('form');
 
-                    Swal.fire({
-                        title: 'Konfirmasi',
-                        text: message,
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonColor: '#dc3545',
-                        cancelButtonColor: '#6c757d',
-                        confirmButtonText: 'Ya, Hapus!',
-                        cancelButtonText: 'Batal',
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            form.submit();
-                        }
-                    });
-                });
+            Swal.fire({
+                title: title,
+                text: message,
+                icon: iconType,
+                showCancelButton: true,
+                confirmButtonColor: btnColor,
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: confirmText,
+                cancelButtonText: 'Batal',
+                reverseButtons: true,
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    if (form) {
+                        form.submit();
+                    } else if (btn.tagName === 'A' && btn.href) {
+                        window.location.href = btn.href;
+                    }
+                }
             });
-
         });
     </script>
 

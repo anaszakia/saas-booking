@@ -93,7 +93,10 @@ class Resource extends Model
                 'resources.name',
                 'resources.code',
                 'resources.capacity',
+                'resources.image',
+                'resource_types.id as resource_type_id',
                 'resource_types.name as type_name',
+                'resource_types.icon as type_icon',
                 'resource_types.default_slot_minutes'
             )
             ->orderBy('resources.name')

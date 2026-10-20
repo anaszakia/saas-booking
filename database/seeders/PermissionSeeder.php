@@ -43,6 +43,12 @@ class PermissionSeeder extends Seeder
             ['name' => 'Edit Venue',    'slug' => 'venues.edit'],
             ['name' => 'Hapus Venue',   'slug' => 'venues.delete'],
 
+            // Resource Types (Jenis Olahraga)
+            ['name' => 'Lihat Jenis Olahraga',  'slug' => 'resource-types.view'],
+            ['name' => 'Buat Jenis Olahraga',   'slug' => 'resource-types.create'],
+            ['name' => 'Edit Jenis Olahraga',   'slug' => 'resource-types.edit'],
+            ['name' => 'Hapus Jenis Olahraga',  'slug' => 'resource-types.delete'],
+
             // Resources
             ['name' => 'Lihat Lapangan', 'slug' => 'resources.view'],
             ['name' => 'Buat Lapangan',  'slug' => 'resources.create'],
@@ -84,6 +90,7 @@ class PermissionSeeder extends Seeder
                 'dashboard.view',
                 'users.view', 'users.create', 'users.edit', 'users.delete',
                 'venues.view', 'venues.create', 'venues.edit', 'venues.delete',
+                'resource-types.view', 'resource-types.create', 'resource-types.edit', 'resource-types.delete',
                 'resources.view', 'resources.create', 'resources.edit', 'resources.delete',
                 'pricing-rules.view', 'pricing-rules.create', 'pricing-rules.edit', 'pricing-rules.delete',
                 'bookings.view', 'bookings.create', 'bookings.edit', 'bookings.delete',

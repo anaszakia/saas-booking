@@ -70,10 +70,15 @@
                                     <a href="{{ route('superadmin.plans.edit', $plan->ulid) }}" class="btn btn-sm btn-light" title="Edit">
                                         <i class="ti ti-pencil"></i> Edit
                                     </a>
-                                    <form action="{{ route('superadmin.plans.destroy', $plan->ulid) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menonaktifkan paket ini?')">
+                                    <form action="{{ route('superadmin.plans.destroy', $plan->ulid) }}" method="POST">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Hapus">
+                                        <button type="button" class="btn btn-sm btn-outline-danger" title="Hapus"
+                                            data-confirm="Apakah Anda yakin ingin menonaktifkan paket {{ $plan->name }}?"
+                                            data-confirm-title="Hapus / Nonaktifkan Paket?"
+                                            data-confirm-btn="Ya, Nonaktifkan"
+                                            data-confirm-color="#dc3545"
+                                            data-confirm-icon="warning">
                                             <i class="ti ti-trash"></i>
                                         </button>
                                     </form>

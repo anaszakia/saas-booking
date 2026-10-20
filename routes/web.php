@@ -60,6 +60,8 @@ Route::middleware(['auth.custom', 'auto.logout'])->group(function () {
         // SuperAdmin SaaS Management
         Route::prefix('superadmin')->name('superadmin.')->group(function () {
             Route::get('/tenants', [\App\Http\Controllers\SuperAdmin\SuperAdminTenantController::class, 'index'])->name('tenants.index');
+            Route::get('/tenants/create', [\App\Http\Controllers\SuperAdmin\SuperAdminTenantController::class, 'create'])->name('tenants.create');
+            Route::post('/tenants', [\App\Http\Controllers\SuperAdmin\SuperAdminTenantController::class, 'store'])->name('tenants.store');
             Route::get('/tenants/{tenant}', [\App\Http\Controllers\SuperAdmin\SuperAdminTenantController::class, 'show'])->name('tenants.show');
             Route::post('/tenants/{tenant}/extend', [\App\Http\Controllers\SuperAdmin\SuperAdminTenantController::class, 'extend'])->name('tenants.extend');
             Route::post('/tenants/{tenant}/toggle-status', [\App\Http\Controllers\SuperAdmin\SuperAdminTenantController::class, 'toggleStatus'])->name('tenants.toggle-status');
@@ -98,6 +100,7 @@ Route::post('/keep-alive', function () {
 
         // Modul Master Fasilitas & Tempat Olahraga
         Route::resource('/venues', \App\Http\Controllers\VenueController::class);
+        Route::resource('/resource-types', \App\Http\Controllers\ResourceTypeController::class);
         Route::resource('/resources', \App\Http\Controllers\ResourceController::class);
         Route::resource('/pricing-rules', \App\Http\Controllers\PricingRuleController::class);
 
@@ -131,6 +134,7 @@ Route::prefix('webhook')->name('webhook.')->group(function () {
 Route::get('/b/{slug}', [\App\Http\Controllers\PublicBookingController::class, 'index'])->name('public.booking');
 Route::post('/b/{slug}/book', [\App\Http\Controllers\PublicBookingController::class, 'store'])->name('public.book');
 Route::get('/invoice/{booking_code}', [\App\Http\Controllers\PublicBookingController::class, 'invoice'])->name('public.invoice');
+Route::get('/invoice/{booking_code}/download-pdf', [\App\Http\Controllers\PublicBookingController::class, 'downloadPdf'])->name('public.invoice.download-pdf');
 Route::post('/invoice/{booking_code}/snap-token', [\App\Http\Controllers\PublicBookingController::class, 'requestSnapToken'])->name('public.invoice.snap-token');
 Route::post('/invoice/{booking_code}/upload-proof', [\App\Http\Controllers\PublicBookingController::class, 'uploadProof'])->name('public.upload-proof');
 

@@ -71,7 +71,12 @@
 
                     <form action="{{ route('superadmin.tenants.toggle-status', $tenant->ulid) }}" method="POST">
                         @csrf
-                        <button type="submit" class="btn w-100 {{ $tenant->status === 'active' ? 'btn-outline-danger' : 'btn-outline-success' }}" onclick="return confirm('Konfirmasi ubah status akun tenant ini?')">
+                        <button type="button" class="btn w-100 {{ $tenant->status === 'active' ? 'btn-outline-danger' : 'btn-outline-success' }}"
+                                data-confirm="Apakah Anda yakin ingin {{ $tenant->status === 'active' ? 'menonaktifkan (suspend)' : 'mengaktifkan kembali' }} akun tenant {{ $tenant->name }}?"
+                                data-confirm-title="{{ $tenant->status === 'active' ? 'Suspend Tenant?' : 'Aktifkan Tenant?' }}"
+                                data-confirm-btn="{{ $tenant->status === 'active' ? 'Ya, Suspend' : 'Ya, Aktifkan' }}"
+                                data-confirm-color="{{ $tenant->status === 'active' ? '#dc3545' : '#198754' }}"
+                                data-confirm-icon="{{ $tenant->status === 'active' ? 'warning' : 'question' }}">
                             <i class="ti {{ $tenant->status === 'active' ? 'ti-ban' : 'ti-check' }} me-1"></i>
                             {{ $tenant->status === 'active' ? 'Tangguhkan / Suspend Akun' : 'Aktifkan Akun' }}
                         </button>

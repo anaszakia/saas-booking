@@ -74,25 +74,32 @@ class MenuSeeder extends Seeder
                 'order'     => 1,
             ],
             [
+                'name'      => 'Jenis Olahraga',
+                'url'       => '/resource-types',
+                'icon'      => 'ti ti-trophy',
+                'parent_id' => $facilityManagement->id,
+                'order'     => 2,
+            ],
+            [
                 'name'      => 'Lapangan & Meja',
                 'url'       => '/resources',
                 'icon'      => 'ti ti-ball-football',
                 'parent_id' => $facilityManagement->id,
-                'order'     => 2,
+                'order'     => 3,
             ],
             [
                 'name'      => 'Aturan Tarif & Harga',
                 'url'       => '/pricing-rules',
                 'icon'      => 'ti ti-currency-dollar',
                 'parent_id' => $facilityManagement->id,
-                'order'     => 3,
+                'order'     => 4,
             ],
             [
                 'name'      => 'Kelola Staf & Tim',
                 'url'       => '/users',
                 'icon'      => 'ti ti-users',
                 'parent_id' => $facilityManagement->id,
-                'order'     => 4,
+                'order'     => 5,
             ],
         ];
 
